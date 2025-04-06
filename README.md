@@ -43,7 +43,7 @@ git clone https://github.com/LeonardoMeyer/Download-YouTube-Videos.git
 cd Download-YouTube-Videos
 
 # Skript ausführen | Run the script
-python app.py
+python main.py
 ```
 
 Nach dem Start öffnet sich eine Weboberfläche im Browser unter `http://localhost:8080`.  
