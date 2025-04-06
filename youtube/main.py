@@ -1,41 +1,54 @@
 from pytube import YouTube
-from pywebio.input import input, actions
+from pywebio.input import input, actions, select
 from pywebio.output import put_text, put_success, put_error, put_html, clear
 from pywebio import start_server
 
 def download_video():
-    put_html("<h1 style='color:blue; text-align:center;'>YouTube Video Downloader</h1>")
-    
-    while True:
-        action = actions(label="O que deseja fazer?", buttons=["Baixar vídeo", "Sair"])
+    # Idioma / Language / Sprache
+    lang = select("Choose your language / Escolha o idioma / Sprache wählen:", 
+                  options=["English", "Português", "Deutsch"])
 
-        if action == "Sair":
-            put_text("Programa encerrado. Até logo!").style("color: gray; font-size: 20px")
+    def t(en, pt, de):
+        return {"English": en, "Português": pt, "Deutsch": de}[lang]
+
+    put_html(f"<h1 style='color:blue; text-align:center;'>YouTube {t('Video Downloader', 'Video Downloader', 'Video-Downloader')}</h1>")
+
+    while True:
+        action = actions(label=t("What would you like to do?", "O que deseja fazer?", "Was möchten Sie tun?"),
+                         buttons=[t("Download Video", "Baixar vídeo", "Video herunterladen"),
+                                  t("Exit", "Sair", "Beenden")])
+
+        if action == t("Exit", "Sair", "Beenden"):
+            put_text(t("Program terminated. See you next time!",
+                       "Programa encerrado. Até logo!",
+                       "Programm beendet. Bis zum nächsten Mal!")).style("color: gray; font-size: 20px")
             break
 
-        link_video = input("Insira o link do vídeo do YouTube:")
+        video_link = input(t("Enter the YouTube video link:",
+                             "Insira o link do vídeo do YouTube:",
+                             "Fügen Sie den YouTube-Link ein:"))
 
-        if "youtube.com" not in link_video and "youtu.be" not in link_video:
-            put_error("Link inválido! Por favor, insira um link do YouTube.")
+        if "youtube.com" not in video_link and "youtu.be" not in video_link:
+            put_error(t("Invalid link! Please enter a valid YouTube link.",
+                        "Link inválido! Por favor, insira um link do YouTube.",
+                        "Ungültiger Link! Bitte fügen Sie einen gültigen YouTube-Link ein."))
             continue
 
         try:
             clear()
-            put_html("<h2 style='color:orange;'>Download em andamento...</h2>")
+            put_html(f"<h2 style='color:orange;'>{t('Downloading...', 'Baixando...', 'Wird heruntergeladen...')}</h2>")
 
-            yt = YouTube(link_video)
-            video = yt.streams.get_highest_resolution()
+            yt = YouTube(video_link)
+            video = yt.streams.get_highest_resolution()  # ✅ mais compatível e direto
 
-            # Caminho padrão de download
-            path_to_download = r'C:\Users\Asus\Downloads'
+            path_to_download = r'C:\Users\Propulsor404\Downloads'
             video.download(path_to_download)
 
-            put_success(f"✅ Vídeo '{yt.title}' baixado com sucesso!")
-            put_text(f"Arquivo salvo em: {path_to_download}")
-        
-        except Exception as e:
-            put_error(f"❌ Ocorreu um erro durante o download: {e}")
+            put_success(f"✅ {t('Video', 'Vídeo', 'Video')} '{yt.title}' {t('downloaded successfully!', 'baixado com sucesso!', 'erfolgreich heruntergeladen!')}")
+            put_text(f"{t('File saved to', 'Arquivo salvo em', 'Datei gespeichert in')}: {path_to_download}")
 
-# Iniciar servidor web local (acessível no navegador)
+        except Exception as e:
+            put_error(f"❌ {t('An error occurred during download', 'Ocorreu um erro durante o download', 'Fehler beim Herunterladen')}: {e}")
+
 if __name__ == "__main__":
     start_server(download_video, port=8080, debug=True)
