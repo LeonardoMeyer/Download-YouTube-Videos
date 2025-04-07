@@ -1,17 +1,24 @@
+import tkinter as tk
+from tkinter import filedialog
+
 from pytube import YouTube
 from pywebio.input import input, actions, select
-from pywebio.output import put_text, put_success, put_error, put_html, clear
+from pywebio.output import (
+    put_text, put_success, put_error, put_html,
+    clear, put_processbar, set_processbar
+)
 from pywebio import start_server
 
+
 def download_video():
-    # Idioma / Language / Sprache
-    lang = select("Choose your language / Escolha o idioma / Sprache wählen:", 
+    # Escolher idioma
+    lang = select("Choose your language / Escolha o idioma / Sprache wählen:",
                   options=["English", "Português", "Deutsch"])
 
     def t(en, pt, de):
         return {"English": en, "Português": pt, "Deutsch": de}[lang]
 
-    put_html(f"<h1 style='color:blue; text-align:center;'>YouTube {t('Video Downloader', 'Video Downloader', 'Video-Downloader')}</h1>")
+    put_html(f"<h1 style='color:blue; text-align:center;'>YouTube {t('Video Downloader', 'Baixador de Vídeo', 'Video-Downloader')}</h1>")
 
     while True:
         action = actions(label=t("What would you like to do?", "O que deseja fazer?", "Was möchten Sie tun?"),
@@ -36,19 +43,44 @@ def download_video():
 
         try:
             clear()
-            put_html(f"<h2 style='color:orange;'>{t('Downloading...', 'Baixando...', 'Wird heruntergeladen...')}</h2>")
-
             yt = YouTube(video_link)
-            video = yt.streams.get_highest_resolution()  # ✅ mais compatível e direto
 
-            path_to_download = r'C:\Users\Propulsor404\Downloads'
-            video.download(path_to_download)
+            # Mostrar opções de resolução
+            streams = yt.streams.filter(progressive=True, file_extension="mp4").order_by("resolution").desc()
+            resolutions = list({stream.resolution for stream in streams if stream.resolution})
+            chosen_res = select(t("Choose resolution", "Escolha a resolução", "Wählen Sie die Auflösung:"), resolutions)
+            video = yt.streams.filter(res=chosen_res, progressive=True).first()
 
+            # Abrir janela para selecionar local de salvamento
+            root = tk.Tk()
+            root.withdraw()
+            save_path = filedialog.asksaveasfilename(
+                defaultextension=".mp4",
+                filetypes=[("MP4 files", "*.mp4")],
+                title=t("Choose file save location", "Escolha onde salvar o arquivo", "Speicherort auswählen")
+            )
+
+            if not save_path:
+                put_error(t("No location selected!", "Nenhum local selecionado!", "Kein Speicherort ausgewählt!"))
+                continue
+
+            put_html(f"<h3 style='color:orange;'>{t('Downloading...', 'Baixando...', 'Herunterladen...')}</h3>")
+            put_processbar("bar")
+
+            def progress_callback(stream, chunk, bytes_remaining):
+                total = stream.filesize
+                percent = (total - bytes_remaining) / total
+                set_processbar("bar", percent)
+
+            yt.register_on_progress_callback(progress_callback)
+
+            video.download(filename=save_path)
             put_success(f"✅ {t('Video', 'Vídeo', 'Video')} '{yt.title}' {t('downloaded successfully!', 'baixado com sucesso!', 'erfolgreich heruntergeladen!')}")
-            put_text(f"{t('File saved to', 'Arquivo salvo em', 'Datei gespeichert in')}: {path_to_download}")
+            put_text(f"{t('Saved to', 'Salvo em', 'Gespeichert in')}: {save_path}")
 
         except Exception as e:
             put_error(f"❌ {t('An error occurred during download', 'Ocorreu um erro durante o download', 'Fehler beim Herunterladen')}: {e}")
+
 
 if __name__ == "__main__":
     start_server(download_video, port=8080, debug=True)
